@@ -35,11 +35,15 @@ double sigmoid(double x)
 }
 
 
-//print a vector
-void print_v(double v[], size_t size)
+//print the weights of all neurons in a layer
+void print_w(struct nr *layer[], size_t size)
 {
     for(size_t i = 0; i < size; i++)
-        printf("%4g", v[i]);
+    {
+        for(size_t j = 0; layer[i]->wlen > i; i++)
+            printf("%f | ", layer[i]->w[j]);
+        printf("\n");
+    }
 }
 
 
@@ -67,8 +71,11 @@ void layer_xor(double W[], double b[], double a[], size_t m, size_t n, double r[
 //free a layer
 void free_layer(struct nr *layer[], size_t size)
 {
-    for(size_t i = 0; i < size; i++) 
+    for(size_t i = 0; i < size; i++)
+    {
         free(layer[i]->w);
+        free(layer[i]);
+    }
     free(layer);
 }
 
@@ -78,6 +85,8 @@ void init_layer(struct nr *layer[], size_t size, size_t size_prev, double rnd)
 {
     for(size_t i = 0; i < size; i++)
     {
+        struct nr *neural = malloc(sizeof(struct nr));
+        layer[i] = neural;
         layer[i]->wlen = size_prev;
         layer[i]->r = 0;
         layer[i]->b = rnd;
@@ -95,6 +104,7 @@ void xor(void)
     ///random init
     double rnd;
     srand((unsigned) time(NULL));
+    rnd = rand() % 1;
 
 
     //size of the differents layers;
@@ -102,149 +112,27 @@ void xor(void)
     size_t len_layer2 = 2;
     size_t len_layer3 = 1;
 
-    struct nr *layer1 = malloc(len_layer1 * sizeof(struct nr));
+    //arrays of neurons aka layers
+    struct nr **layer1 = malloc(len_layer1 * sizeof(struct nr));
+    struct nr **layer2 = malloc(len_layer2 * sizeof(struct nr));
+    struct nr **layer3 = malloc(len_layer3 * sizeof(struct nr));
 
-    //random int for OR
-    int rn = rand()%(10 + 2) - 1;
+    //init the layers
+    init_layer(layer1, len_layer1, 0         , rnd);
+    init_layer(layer2, len_layer2, len_layer1, rnd);
+    init_layer(layer3, len_layer3, len_layer2, rnd);
 
-    //layer 1 neuron 1 weights
-    double l1n1w[] = {
-        rn, rn
-    };
-
-    //random double for AND
-    rnd = rand() % 1;
-
-
-    //layer 1 neuron 2 weights
-    double l1n2w[] = {
-        rnd, rnd
-    };
-
-    //layer 1 neuron 1 threshold
-    double b1n1[] = {
-        -8
-    };
-
-    //layer 1 neuron 2 threshold
-    double b1n2[] = {
-         -9.00631428
-    };
-
-    //layer 2 weights
-    double l2w[] = {
-        4, -8
-    };
-
-    //layer 2 threshold
-    double b2[] = {
-       -1.5
-    };
-
-
-    double a[] = {0,0};
-    double r[] = {0}; //stock the XOR res
-    double l1r1[] = {0}; //stock the OR res
-    double l1r2[] = {0}; //stock the AND res
-    double l1r[2]; //stock the OR and the AND
-
-
-    double andh[2] = {-0.125, -0.125}; //correct AND weights
-    double orl[2] = {0.5,0.5};
-
-    int i = 0;
-    //corection till we have the good results
-    while(comp_arr(results, res, 4) == 0)
-    {
-
-        double co = 0.27;
-        //xor with 0 0
-        //OR
-        layer_xor(l1n1w, b1n1, a, 1, 2, l1r1);
-
-
-        //AND
-        layer_xor(l1n2w, b1n2, a, 1, 2, l1r2);
-
-        l1r[0] = l1r1[0];
-        l1r[1] = l1r2[0];
-
-        layer_xor(l2w, b2, l1r, 1, 2, r);
-
-        printf("0 XOR 0 -> %g\n", r[0]);
-
-        res[0] =  r[0] + co;
+    
+    print_w(layer1, len_layer1);
 
 
 
-        //xor with 1 0
-        a [0] = 1; a[1] = 0;
-
-        layer_xor(l1n1w, b1n1, a, 1, 2, l1r1);
-
-        if(l1r1[0] < 0.98) //or too low
-            vector_sum(l1n1w, orl, 2, l1n1w);
-
-        if(l1r2[0] > 0.02) //and too high
-            vector_sum(l1n2w, andh , 2, l1n2w);
-
-        l1r[0] = l1r1[0];
-        l1r[1] = l1r2[0];
-
-        layer_xor(l2w, b2, l1r, 1, 2, r);
-
-        printf("1 XOR 0 -> %g\n", r[0]);
-
-        res[1] =  r[0] + co;
 
 
+    free_layer(layer1, len_layer1);
+    free_layer(layer2, len_layer2);
+    free_layer(layer3, len_layer3);
 
-        //xor with 0 1
-        a[0] = 0; a[1] = 1;
-
-        layer_xor(l1n1w, b1n1, a, 1, 2, l1r1);
-
-        if(l1r1[0] < 0.98) //or too low
-            vector_sum(l1n1w, orl, 2, l1n1w);
-
-        layer_xor(l1n2w, b1n2, a, 1, 2, l1r2);
-
-        if(l1r2[0] > 0.02) //and too high
-            vector_sum(l1n2w, andh, 2, l1n2w);
-
-
-        l1r[0] = l1r1[0];
-        l1r[1] = l1r2[0];
-
-        layer_xor(l2w, b2, l1r, 1, 2, r);
-
-        printf("0 XOR 1 -> %g\n", r[0]);
-
-        res[2] =  r[0] + co;
-
-
-
-        //xor with 1 1
-        a[0] = 1; a[1] = 1;
-
-        layer_xor(l1n1w, b1n1, a, 1, 2, l1r1);
-
-        layer_xor(l1n2w, b1n2, a, 1, 2, l1r2);
-
-
-        l1r[0] = l1r1[0];
-        l1r[1] = l1r2[0];
-
-        layer_xor(l2w, b2, l1r, 1, 2, r);
-
-        printf("1 XOR 1 -> %g\n", r[0]);
-
-        res[3] =  r[0] + co;
-        printf("\n\n");
-
-        i++;
-    }
-    printf("Number of trials : %d\n\n",i);
 }
 
 
