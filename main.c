@@ -55,6 +55,14 @@ void print_w(struct layer *lay)
 }
 
 
+//print the results of all neurons in a layer
+void print_r(struct layer *lay)
+{
+    printf("Layer %lu :\n", lay->number);
+    for(size_t i = 0; i < lay->size; i++)
+        printf("Neuron %lu : %f ", i, lay->tab[i]->r);
+    printf("\n");
+}
 //the resulst we want to get
 int results [] = {
      0, 1, 1, 0
@@ -84,6 +92,14 @@ void free_layer(struct layer *lay)
     }
     free(lay->tab);           //free the arrays of neuron
     free(lay);                //free the layer
+}
+
+
+//init the first layer with the correct values
+void init_first_layer(struct layer *lay, size_t f, size_t s)
+{
+    lay->tab[0]->r = f;
+    lay->tab[1]->r = s;
 }
 
 
@@ -117,6 +133,18 @@ void init_layer(struct layer *lay, size_t size_prev, double rnd)
 }
 
 
+//forward function of neural network
+void forward(struct layer *first, struct layer *second)
+{
+    for(size_t i = 0; i < second->size; i++)
+    {
+        for(size_t j = 0; j < first->size; j++)
+            second->tab[i]->r += first->tab[j]->r * second->tab[i]->w[j];
+        second->tab[i]->r += second->tab[i]->b;
+    }
+}
+
+
 //logical door XOR
 void xor(void)
 {
@@ -141,12 +169,20 @@ void xor(void)
     init_layer(layer2, len_layer1, rnd);
     init_layer(layer3, len_layer2, rnd);
 
+    init_first_layer(layer1, 1, 1);
+
     print_w(layer1);
     print_w(layer2);
     print_w(layer3);
+  
+    forward(layer1, layer2);
+    forward(layer2, layer3);
 
 
-
+    print_r(layer1);
+    print_r(layer2);
+    print_r(layer3);
+  
     //free the layers
     free_layer(layer1);
     free_layer(layer2);
