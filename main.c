@@ -19,12 +19,17 @@ void rotation(double theta, double v[], double r[])
 }
 */
 
-
+//neuronal struct
 struct nr {
-    double *w;
-    size_t wlen;
-    double r;
-    double b;
+    double     *w;    //the arrays of weights
+    double      b, r; // b: threshold, r: result
+};
+
+
+//layer struct
+struct layer {
+    size_t  number, size, wlen;//size: nbr of neurons, wlen: len of the [] weights
+    struct nr **tab; //the arrays of neurons
 };
 
 
@@ -36,14 +41,17 @@ double sigmoid(double x)
 
 
 //print the weights of all neurons in a layer
-void print_w(struct nr *layer[], size_t size)
+void print_w(struct layer *lay)
 {
-    for(size_t i = 0; i < size; i++)
+    printf("Layer %lu :\n", lay->number);
+    for(size_t i = 0; i < lay->size; i++)
     {
-        for(size_t j = 0; layer[i]->wlen > i; i++)
-            printf("%f | ", layer[i]->w[j]);
+        printf("Neuron %lu : | ", i);
+        for(size_t j = 0; lay->wlen > j; j++)
+            printf("%f | ", lay->tab[0]->w[j]);
         printf("\n");
     }
+    printf("\n");
 }
 
 
@@ -57,8 +65,6 @@ int res [] = {
 };
 
 
-
-
 //locical door for neurons with 2 input and 1 output
 void layer_xor(double W[], double b[], double a[], size_t m, size_t n, double r[])
 {
@@ -69,31 +75,44 @@ void layer_xor(double W[], double b[], double a[], size_t m, size_t n, double r[
 
 
 //free a layer
-void free_layer(struct nr *layer[], size_t size)
+void free_layer(struct layer *lay)
 {
-    for(size_t i = 0; i < size; i++)
+    for(size_t i = 0; i < lay->size; i++)
     {
-        free(layer[i]->w);
-        free(layer[i]);
+        free(lay->tab[i]->w); //free the weights arrays
+        free(lay->tab[i]);    //free the neuron
     }
-    free(layer);
+    free(lay->tab);           //free the arrays of neuron
+    free(lay);                //free the layer
+}
+
+
+//create and return and layer with only size initialized
+struct layer* create_layer(size_t size, size_t number)
+{
+    struct layer *lay = malloc(sizeof( struct layer));
+    lay->size = size;
+    lay->number = number;
+    return lay;
 }
 
 
 //init a layer with random values
-void init_layer(struct nr *layer[], size_t size, size_t size_prev, double rnd)
+void init_layer(struct layer *lay, size_t size_prev, double rnd)
 {
-    for(size_t i = 0; i < size; i++)
-    {
-        struct nr *neural = malloc(sizeof(struct nr));
-        layer[i] = neural;
-        layer[i]->wlen = size_prev;
-        layer[i]->r = 0;
-        layer[i]->b = rnd;
+    lay->tab = malloc(lay->size * sizeof(struct nr));
 
-        layer[i]->w = malloc(size_prev * sizeof(double));
-        for(size_t j = 0; j < layer[i]->wlen; j++)
-            layer[i]->w[j] = rnd;
+    for(size_t i = 0; i < lay->size; i++)
+    {
+        struct nr *neuron = malloc(sizeof(struct nr));
+        lay->tab[i] = neuron;
+        lay->wlen = size_prev;
+        lay->tab[i]->r = 0;
+        lay->tab[i]->b = rnd;
+
+        lay->tab[i]->w = malloc(size_prev * sizeof(double));
+        for(size_t j = 0; j < lay->wlen; j++)
+            lay->tab[i]->w[j] = rnd;
     }
 }
 
@@ -104,7 +123,7 @@ void xor(void)
     ///random init
     double rnd;
     srand((unsigned) time(NULL));
-    rnd = rand() % 1;
+    rnd = (double)rand()/(double)(RAND_MAX);
 
 
     //size of the differents layers;
@@ -112,26 +131,26 @@ void xor(void)
     size_t len_layer2 = 2;
     size_t len_layer3 = 1;
 
-    //arrays of neurons aka layers
-    struct nr **layer1 = malloc(len_layer1 * sizeof(struct nr));
-    struct nr **layer2 = malloc(len_layer2 * sizeof(struct nr));
-    struct nr **layer3 = malloc(len_layer3 * sizeof(struct nr));
+    //create the layers
+    struct layer *layer1 = create_layer(len_layer1, 1);
+    struct layer *layer2 = create_layer(len_layer2, 2);
+    struct layer *layer3 = create_layer(len_layer3, 3);
 
     //init the layers
-    init_layer(layer1, len_layer1, 0         , rnd);
-    init_layer(layer2, len_layer2, len_layer1, rnd);
-    init_layer(layer3, len_layer3, len_layer2, rnd);
+    init_layer(layer1, 0         , rnd);
+    init_layer(layer2, len_layer1, rnd);
+    init_layer(layer3, len_layer2, rnd);
 
-    
-    print_w(layer1, len_layer1);
-
-
-
+    print_w(layer1);
+    print_w(layer2);
+    print_w(layer3);
 
 
-    free_layer(layer1, len_layer1);
-    free_layer(layer2, len_layer2);
-    free_layer(layer3, len_layer3);
+
+    //free the layers
+    free_layer(layer1);
+    free_layer(layer2);
+    free_layer(layer3);
 
 }
 
