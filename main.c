@@ -7,6 +7,9 @@
 
 #include "algebra.h"
 
+#define input_len 2
+#define output_len 1    
+    
 
 //neuronal struct
 struct nr {
@@ -18,13 +21,14 @@ struct nr {
 //layer struct
 struct layer {
     size_t  number, size, wlen;//size: nbr of neurons, wlen: len of the [] weights
-    struct nr **tab; //the arrays of neurons
+    struct  nr **tab; //the arrays of neurons
 };
 
 
 //struct network
 struct network {
     size_t size;
+    double input[input_len], output[output_len];
     struct layer **lay;
 };
 
@@ -53,7 +57,7 @@ double rnd()
 //print the weights of all neurons in a layer
 void print_w(struct layer *lay)
 {
-    printf("Layer %lu :\n", lay->number);
+    printf("Layer %lu weights :\n", lay->number);
     for(size_t i = 0; i < lay->size; i++)
     {
         printf("Neuron %lu : | ", i);
@@ -76,7 +80,7 @@ void print_wn(struct network *rs)
 //print the results of all neurons in a layer
 void print_r(struct layer *lay)
 {
-    printf("Layer %lu :\n", lay->number);
+    printf("Layer %lu results :\n", lay->number);
     for(size_t i = 0; i < lay->size; i++)
         printf("Neuron %lu : %f \n", i, lay->tab[i]->r);
     printf("\n");
@@ -108,17 +112,17 @@ void free_layer(struct layer *lay)
 void free_network(struct network *rs)
 {
     for(size_t i = 0; i < rs->size; i++)
-        free_layer(rs->lay[i]);
-    free(rs->lay);
-    free(rs);
+        free_layer(rs->lay[i]); //free each layer
+    free(rs->lay);            //free the layer array
+    free(rs);                 //free the network
 }
 
 
 //init the first layer with the correct values
-void init_first_layer(struct layer *lay, size_t f, size_t s)
+void init_first_layer(struct layer *lay, double input[])
 {
-    lay->tab[0]->r = f;
-    lay->tab[1]->r = s;
+    for(size_t i = 0; i < lay->size; i++)
+        lay->tab[i]->r = input[i];
 }
 
 
@@ -144,6 +148,7 @@ void init_layer(struct layer *lay, size_t size_prev)
         lay->wlen = size_prev;
         lay->tab[i]->r = 0;
         lay->tab[i]->y = 0;
+        lay->tab[i]->dy = 0;
         lay->tab[i]->b = rnd();
 
         lay->tab[i]->w = malloc(size_prev * sizeof(double));
@@ -166,8 +171,12 @@ struct network* create_network(size_t size, size_t layer[])
     init_layer(rs->lay[0], 0);
     for(size_t i = 1; i < size; i++)
         init_layer(rs->lay[i], rs->lay[i-1]->size);
-    init_first_layer(rs->lay[0], 1, 1);
-
+   
+    rs->input[0] = 1;
+    rs->input[1] = 1;
+    
+    //special init for the inputs layer
+    init_first_layer(rs->lay[0], rs->input);
     return rs;
 }
 
@@ -195,7 +204,16 @@ void forward(struct network *rs)
 
 
 //the backpropagation responsbile for the learning
-void back_prop();
+void back_prop(struct network *rs)
+{
+    for(int i = rs->size - 1; i >= 0; i--)
+    {
+        for(size_t j = 0; j < rs->lay[i]->size; j++)
+        {
+            rs->lay[i]->tab[j]->dy = sigmoid_prime(rs->lay[i]->tab[j]->y);
+        }
+    }
+}
 
 
 //logical door XOR)
@@ -205,7 +223,7 @@ void xor(void)
     srand((unsigned) time(NULL));
 
     //size of the differents layers;
-    size_t len_layers[] = { 2, 2, 1 };
+    size_t len_layers[] = { input_len, 2, 1 };
     size_t len_reseau = 3;
 
     struct network *rs = create_network(len_reseau, len_layers);
