@@ -8,13 +8,14 @@
 #include "algebra.h"
 
 #define input_len 2
-#define output_len 1    
+#define output_len 1
+#define wanted_len 1    
     
 
 //neuronal struct
 struct nr {
     double     *w;    //the arrays of weights
-    double      b, r, y, dy; // b: threshold, r: result
+    double      b, by, r, y, dy; // b: threshold, r: result
 };
 
 
@@ -28,7 +29,7 @@ struct layer {
 //struct network
 struct network {
     size_t size;
-    double input[input_len], output[output_len];
+    double input[input_len], output[output_len], wanted[wanted_len];
     struct layer **lay;
 };
 
@@ -146,10 +147,11 @@ void init_layer(struct layer *lay, size_t size_prev)
         struct nr *neuron = malloc(sizeof(struct nr));
         lay->tab[i] = neuron;
         lay->wlen = size_prev;
-        lay->tab[i]->r = 0;
-        lay->tab[i]->y = 0;
+        lay->tab[i]->r  = 0;
+        lay->tab[i]->y  = 0;
         lay->tab[i]->dy = 0;
-        lay->tab[i]->b = rnd();
+        lay->tab[i]->b  = rnd();
+        lay->tab[i]->by = rnd();
 
         lay->tab[i]->w = malloc(size_prev * sizeof(double));
         for(size_t j = 0; j < lay->wlen; j++)
@@ -203,27 +205,53 @@ void forward(struct network *rs)
 }
 
 
-//the backpropagation responsbile for the learning
-void back_prop(struct network *rs)
+//back propagation for the last layer
+void back_last(struct layer *lay, double output[], double wanted[])
 {
-    for(int i = rs->size - 1; i >= 0; i--)
-    {
-        for(size_t j = 0; j < rs->lay[i]->size; j++)
-        {
-            rs->lay[i]->tab[j]->dy = sigmoid_prime(rs->lay[i]->tab[j]->y);
-        }
+    for(size_t i = 0; i < lay->size; i++)
+    {   
+        //compute the delta y aka dy = sig'(y) * (output - wanted)
+        lay->tab[i]->dy=sigmoid_prime(lay->tab[i]->y)*(output[0]-wanted[0]);
+
+        //compute the new weights w = w + r * dy
+        for(size_t j = 0; j < lay->wlen; j++)
+            lay->tab[i]->w[j]=lay->tab[i]->w[j]+lay->tab[i]->r*lay->tab[i]->dy;
+
+        lay->tab[i]->by = by + dy * 1; //1 is the learning coeff
     }
 }
 
 
-//logical door XOR)
-void xor(void)
+//backpropagation for normal layer
+void back(struct layer *first, struct layer *second)
+{
+    for(size_t i = 0; i < lay->size; i++)
+    {
+        first->tab[i]->dy = sigmoid_prime(first->tab[i]->y) *
+        second->tab[0]->dy * second->tab[0]->w[i];
+    }
+}
+
+
+//the backpropagation responsbile for the learning
+void back_prop(struct network *rs)
+{
+    back_last(rs->lay[rs->size - 1]);
+    for(int i = rs->size - 2; i >= 0; i--)    
+    {
+        back(rs->lay[i], rs->output, rs->wanted);
+    }
+}
+
+
+//train the network
+void train(void)
 {
     ///random init
     srand((unsigned) time(NULL));
 
     //size of the differents layers;
-    size_t len_layers[] = { input_len, 2, 1 };
+    size_t len_layers[] = { input_len, 2, output_len };
     size_t len_reseau = 3;
 
     struct network *rs = create_network(len_reseau, len_layers);
@@ -245,6 +273,6 @@ void xor(void)
 //main function of the program
 int main()
 {
-    xor();
+    train();
     return 0;
 }
