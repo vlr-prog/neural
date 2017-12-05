@@ -216,16 +216,17 @@ void back_last(struct layer *lay, double output[], double wanted[])
         //compute the new weights w = w + r * dy
         for(size_t j = 0; j < lay->wlen; j++)
             lay->tab[i]->w[j]=lay->tab[i]->w[j]+lay->tab[i]->r*lay->tab[i]->dy;
-
-        lay->tab[i]->by = by + dy * 1; //1 is the learning coeff
-    }
+        
+        //1 is the learning coeff
+        lay->tab[i]->by = lay->tab[i]->by + lay->tab[i]->dy * 1;
+     }
 }
 
 
 //backpropagation for normal layer
 void back(struct layer *first, struct layer *second)
 {
-    for(size_t i = 0; i < lay->size; i++)
+    for(size_t i = 0; i < second->size; i++)
     {
         first->tab[i]->dy = sigmoid_prime(first->tab[i]->y) *
         second->tab[0]->dy * second->tab[0]->w[i];
@@ -236,10 +237,10 @@ void back(struct layer *first, struct layer *second)
 //the backpropagation responsbile for the learning
 void back_prop(struct network *rs)
 {
-    back_last(rs->lay[rs->size - 1]);
+    back_last(rs->lay[rs->size - 1], rs->output, rs->wanted);
     for(int i = rs->size - 2; i >= 0; i--)    
     {
-        back(rs->lay[i], rs->output, rs->wanted);
+        back(rs->lay[i], rs->lay[i + 1]);
     }
 }
 
