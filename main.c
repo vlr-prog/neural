@@ -15,7 +15,7 @@
 //neuronal struct
 struct nr {
     double     *w;    //the arrays of weights
-    double      b, by, r, y, dy; // b: threshold, r: result
+    double      b,  r, y, dy; // b: threshold, r: result
 };
 
 
@@ -151,7 +151,6 @@ void init_layer(struct layer *lay, size_t size_prev)
         lay->tab[i]->y  = 0;
         lay->tab[i]->dy = 0;
         lay->tab[i]->b  = rnd();
-        lay->tab[i]->by = rnd();
 
         lay->tab[i]->w = malloc(size_prev * sizeof(double));
         for(size_t j = 0; j < lay->wlen; j++)
@@ -161,14 +160,14 @@ void init_layer(struct layer *lay, size_t size_prev)
 
 
 //create and init the wire
-struct network* create_network(size_t size, size_t layer[])
+struct network* create_network(size_t size, size_t layer_size[])
 {
     struct network *rs = malloc(sizeof(struct network));
     rs->size = size;
     rs->lay = malloc(size * sizeof(struct layer));
 
     for(size_t i = 0; i < size; i++)
-        rs->lay[i] = create_layer(layer[i], i);
+        rs->lay[i] = create_layer(layer_size[i], i);
 
     init_layer(rs->lay[0], 0);
     for(size_t i = 1; i < size; i++)
@@ -206,30 +205,39 @@ void forward(struct network *rs)
 
 
 //back propagation for the last layer
-void back_last(struct layer *lay, double output[], double wanted[])
+void back_last(struct layer *prev, struct layer *lay,
+               double output[],    double wanted[])
 {
     for(size_t i = 0; i < lay->size; i++)
     {
         //compute the delta y aka dy = sig'(y) * (output - wanted)
-        lay->tab[i]->dy=sigmoid_prime(lay->tab[i]->y)*(output[0]-wanted[0]);
+        lay->tab[i]->dy = sigmoid_prime(lay->tab[i]->y)*(wanted[0]-output[0]);
 
-        //compute the new weights w = w + r * dy
+        //by += dy * 1  ;  1 is the learning coeff
+        lay->tab[i]->b += lay->tab[i]->dy * 1;
+ 
+        //compute the new weights w +=  r * dy
         for(size_t j = 0; j < lay->wlen; j++)
-            lay->tab[i]->w[j]=lay->tab[i]->w[j]+lay->tab[i]->r*lay->tab[i]->dy;
-
-        //1 is the learning coeff
-        lay->tab[i]->by = lay->tab[i]->by + lay->tab[i]->dy * 1;
+            lay->tab[i]->w[j] +=  prev->tab[j]->r * lay->tab[i]->dy;
      }
 }
 
 
 //backpropagation for normal layer
-void back(struct layer *first, struct layer *second)
+void back(struct layer *previous, struct layer *first, struct layer *second)
 {
-    for(size_t i = 0; i < second->size; i++)
+    for(size_t i = 0; i < first->size; i++)
     {
+        //dyi = sig'(yi) * second->dy * second->w
         first->tab[i]->dy = sigmoid_prime(first->tab[i]->y) *
         second->tab[0]->dy * second->tab[0]->w[i];
+
+        // bi += dy * 1
+        first->tab[i]->b += first->tab[i]->dy * 1;
+
+        //compute the new weights wj +=  prev rj * dyi
+        for(size_t j = 0; j < first->wlen; j++)
+            first->tab[i]->w[j] +=  first->tab[i]->dy * previous->tab[j]->r;
     }
 }
 
@@ -237,11 +245,11 @@ void back(struct layer *first, struct layer *second)
 //the backpropagation responsbile for the learning
 void back_prop(struct network *rs)
 {
-    back_last(rs->lay[rs->size - 1], rs->output, rs->wanted);
-    for(int i = rs->size - 2; i >= 0; i--)
-    {
-        back(rs->lay[i], rs->lay[i + 1]);
-    }
+    size_t s = rs->size;
+    back_last(rs->lay[s - 2], rs->lay[s - 1], rs->output, rs->wanted);
+
+    for(int i = rs->size - 2; i > 0; i--)
+        back(rs->lay[i - 1], rs->lay[i], rs->lay[i + 1]);
 }
 
 
@@ -263,8 +271,25 @@ void train(void)
     //add weights
     forward(rs);
 
-    //print the results after the foward
-    print_rn(rs);
+    int wanted_res[] = { 0, 1, 1, 0 };
+    int inputs[] = { 0, 0, 1, 0, 0, 1, 1, 1};
+
+    for(size_t i = 0; i < 2000; i++)
+    {
+        for (size_t j = 0; j < 4; j++)
+        {
+            rs->input[0] = inputs[2 * j];
+            rs->input[1] = inputs[2 * j + 1];
+            rs->output[0] = rs->lay[rs->size - 1]->tab[0]->r;
+            rs->wanted[0] = wanted_res[j];
+
+            forward(rs);
+            back_prop(rs);
+            printf("%d XOR %d = %f\n", inputs[2*j], inputs[2*j+1],
+            rs->lay[rs->size - 1]->tab[0]->r);
+        }
+        printf("\n\n");
+    }
 
     //free the layers
     free_network(rs);
