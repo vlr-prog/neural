@@ -9,8 +9,8 @@
 
 #define input_len 2
 #define output_len 1
-#define wanted_len 1    
-    
+#define wanted_len 1
+
 
 //neuronal struct
 struct nr {
@@ -166,17 +166,17 @@ struct network* create_network(size_t size, size_t layer[])
     struct network *rs = malloc(sizeof(struct network));
     rs->size = size;
     rs->lay = malloc(size * sizeof(struct layer));
-    
+
     for(size_t i = 0; i < size; i++)
         rs->lay[i] = create_layer(layer[i], i);
-    
+
     init_layer(rs->lay[0], 0);
     for(size_t i = 1; i < size; i++)
         init_layer(rs->lay[i], rs->lay[i-1]->size);
-   
+
     rs->input[0] = 1;
     rs->input[1] = 1;
-    
+
     //special init for the inputs layer
     init_first_layer(rs->lay[0], rs->input);
     return rs;
@@ -209,14 +209,14 @@ void forward(struct network *rs)
 void back_last(struct layer *lay, double output[], double wanted[])
 {
     for(size_t i = 0; i < lay->size; i++)
-    {   
+    {
         //compute the delta y aka dy = sig'(y) * (output - wanted)
         lay->tab[i]->dy=sigmoid_prime(lay->tab[i]->y)*(output[0]-wanted[0]);
 
         //compute the new weights w = w + r * dy
         for(size_t j = 0; j < lay->wlen; j++)
             lay->tab[i]->w[j]=lay->tab[i]->w[j]+lay->tab[i]->r*lay->tab[i]->dy;
-        
+
         //1 is the learning coeff
         lay->tab[i]->by = lay->tab[i]->by + lay->tab[i]->dy * 1;
      }
@@ -238,7 +238,7 @@ void back(struct layer *first, struct layer *second)
 void back_prop(struct network *rs)
 {
     back_last(rs->lay[rs->size - 1], rs->output, rs->wanted);
-    for(int i = rs->size - 2; i >= 0; i--)    
+    for(int i = rs->size - 2; i >= 0; i--)
     {
         back(rs->lay[i], rs->lay[i + 1]);
     }
@@ -261,8 +261,8 @@ void train(void)
     print_wn(rs);
 
     //add weights
-    forward(rs);   
-    
+    forward(rs);
+
     //print the results after the foward
     print_rn(rs);
 
