@@ -123,7 +123,10 @@ void free_network(struct network *rs)
 void init_first_layer(struct layer *lay, double input[])
 {
     for(size_t i = 0; i < lay->size; i++)
+    {
         lay->tab[i]->r = input[i];
+        lay->tab[i]->y = input[i];
+    }
 }
 
 
@@ -173,8 +176,8 @@ struct network* create_network(size_t size, size_t layer_size[])
     for(size_t i = 1; i < size; i++)
         init_layer(rs->lay[i], rs->lay[i-1]->size);
 
-    rs->input[0] = 1;
-    rs->input[1] = 1;
+    rs->input[0] = 0;
+    rs->input[1] = 0;
 
     //special init for the inputs layer
     init_first_layer(rs->lay[0], rs->input);
@@ -199,6 +202,7 @@ void frd(struct layer *first, struct layer *second)
 //use frd on the struct network
 void forward(struct network *rs)
 {
+    init_first_layer(rs->lay[0], rs->input);
     for(size_t i = 0; i < rs->size - 1; i++)
         frd(rs->lay[i], rs->lay[i+1]);
 }
@@ -210,12 +214,12 @@ void back_last(struct layer *prev, struct layer *lay,
 {
     for(size_t i = 0; i < lay->size; i++)
     {
-        //compute the delta y aka dy = sig'(y) * (output - wanted)
+        //compute the delta y aka dy = sig'(y) * (wanted - output)
         lay->tab[i]->dy = sigmoid_prime(lay->tab[i]->y)*(wanted[0]-output[0]);
 
         //by += dy * 1  ;  1 is the learning coeff
         lay->tab[i]->b += lay->tab[i]->dy * 1;
- 
+
         //compute the new weights w +=  r * dy
         for(size_t j = 0; j < lay->wlen; j++)
             lay->tab[i]->w[j] +=  prev->tab[j]->r * lay->tab[i]->dy;
@@ -247,6 +251,8 @@ void back_prop(struct network *rs)
 {
     size_t s = rs->size;
     back_last(rs->lay[s - 2], rs->lay[s - 1], rs->output, rs->wanted);
+
+    forward(rs);
 
     for(int i = rs->size - 2; i > 0; i--)
         back(rs->lay[i - 1], rs->lay[i], rs->lay[i + 1]);
@@ -284,13 +290,14 @@ void train(void)
             rs->wanted[0] = wanted_res[j];
 
             forward(rs);
-            back_prop(rs);
+        
             printf("%d XOR %d = %f\n", inputs[2*j], inputs[2*j+1],
             rs->lay[rs->size - 1]->tab[0]->r);
+       
+            back_prop(rs);
         }
         printf("\n\n");
     }
-
     //free the layers
     free_network(rs);
 }
